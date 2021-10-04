@@ -30,7 +30,7 @@ create table shelf (
 -- texts
 
 -- note that subject_id for books is set twice, once here and once through shelf. That's an issue.
-create table text (
+create table document (
     text_id int primary key,
     text_title varchar(64),
     subject_id int,
@@ -38,7 +38,7 @@ create table text (
     book_id int as (if(is_book = true, text_id, null)) stored null unique,
     article_id int as (if(is_book = true, null, text_id)) stored null unique,
     foreign key (subject_id) references subject_area (subject_id)
-);
+) comment 'a single text; either a book or a journal article';
 
 -- journals
 
@@ -46,7 +46,7 @@ create table journal (
     journal_id int primary key auto_increment,
     journal_title varchar(64),
     issue_name_template varchar(64) 
-		comment 'can hold a template for issue designation, eg. "01/2010", "Fall 2010",...',
+		comment 'can hold a template for issue designation, eg. "01/2010", "Fall 2010",..., supposing template handling is up to the app',
     shelf_id int,
     foreign key (shelf_id) references shelf (journal_shelf_id)
 );
@@ -65,7 +65,7 @@ create table article (
     issue_id int,
     subject_id int,
     foreign key (issue_id) references journal_issue (issue_id),
-    foreign key (article_id) references text (article_id)
+    foreign key (article_id) references document (article_id)
 );
 
 -- books
@@ -81,12 +81,12 @@ create table book (
     shelf_id int,
     foreign key (publisher_id) references publisher (publisher_id),
     foreign key (shelf_id) references shelf (bookshelf_id),
-    foreign key (book_id) references text (book_id)
+    foreign key (book_id) references document (book_id)
 );
 create table book_copy (
     book_id int,
     copy_count int comment 'counts multiple copies of the same book',
-    is_available boolean default true comment 'tracks only if a book is available for loan. More information are handled in a loan itself.',
+    is_available boolean default true comment 'tracks only whether a book is currently available. More information handled through a loan itself.',
     FOREIGN KEY (book_id) REFERENCES book (book_id),
     PRIMARY KEY (book_id, copy_count)
 );
@@ -101,7 +101,7 @@ create table authorship (
     author_id int,
     text_id int,
     FOREIGN KEY (author_id) REFERENCES author (author_id),
-    FOREIGN KEY (text_id) REFERENCES text (text_id),
+    FOREIGN KEY (text_id) REFERENCES document (text_id),
     PRIMARY KEY (author_id, text_id)
 );
 
@@ -118,7 +118,7 @@ create table text_kwd (
     text_id int,
     kwd_id int,
     relevance int,
-    FOREIGN KEY (text_id) REFERENCES text (text_id),
+    FOREIGN KEY (text_id) REFERENCES document (text_id),
     FOREIGN KEY (kwd_id) REFERENCES keyword (kwd_id),
     PRIMARY KEY (text_id, kwd_id)
 );
@@ -145,7 +145,7 @@ create table customer (
 create table employee (
     employee_id int primary key auto_increment,
     position varchar(64),
-    payment_information varchar(64),
+    salary_information varchar(64),
     foreign key (employee_id) references customer (customer_id)
 );
 
@@ -153,11 +153,9 @@ create table employee (
 
 create table counter_event (
     event_id int primary key auto_increment,
-    customer_id int,
     employee_id int,
     event_time timestamp default current_timestamp,
     fee_paid decimal(8, 2),
-    foreign key (customer_id) references customer (customer_id),
     foreign key (employee_id) references employee (employee_id)
 ) comment 'stores one customer interaction at the counter, where the customer can pay some fees and pick up and/or return multiple books';
 -- Since reservations without loans are supposed to be an exception, I'll treat a reservation as an optional part of the loan process.
@@ -185,28 +183,38 @@ create table loan (
     foreign key (picked_up) references counter_event (event_id),
     foreign key (returned) references counter_event (event_id)
 );
-/*
-    loan_status varchar(16) as 
-	(
-		case
-			when returned is not null then 
-				'returned'
-			when picked_up is not null then 
-				'on loan'
-			when reservation_canceled_at is not null then 
-				'reservation canceled'
-			else 
-				'reserved'
-        end
-	) virtual,
-*/
--- todo: check constraint: customer ids for loan and counter event must match (unless i want to make possible that someone returns someone else's books.)
--- todo: normalize into one table for loan, one for reservation and one that handles book and customer
-create table reservation (
-	loan_id int primary key,
-    reserved_at timestamp default current_timestamp,
-    expires_at timestamp,
-    canceled_at timestamp null default null,
-    expired_or_canceled timestamp as (ifnull(canceled_at, expires_at)),
-    foreign key (loan_id) references loan (loan_id)
-);
+
+-- how to determine loan status
+create view loan_overview as 
+	select 
+		p.book_id,
+        p.copy_count,
+        p.customer_id,
+        r.reserved_at,
+        r.reservation_canceled_at,
+        l.picked_up,
+        l.returned,
+        l.due_date,
+        (
+			case 
+			when returned is not null then 'returned' 
+            when picked_up is not null then 
+				case
+				when due_date < current_date then 'overdue'
+				else 'on loan'
+				end
+            when reservation_canceled_at is not null then 'canceled reservation' 
+            when reserved_at is not null then 'reserved'
+            else 'data error'
+			end
+		) as loan_status, 
+        (
+			(returned is not null) * 1 + 
+			(picked_up is not null) * 2 + 
+			(due_date is not null and due_date < current_date) * 4 + 
+			(reservation_canceled_at is not null) * 8 + 
+			(reserved_at is not null) * 16 
+        ) as status_code
+    from loan_process as p
+    left join reservation as r on p.loan_id = r.loan_id 
+    left join loan as l on p.loan_id = l.loan_id;
