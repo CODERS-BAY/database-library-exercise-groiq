@@ -162,16 +162,25 @@ create table counter_event (
 ) comment 'stores one customer interaction at the counter, where the customer can pay some fees and pick up and/or return multiple books';
 -- Since reservations without loans are supposed to be an exception, I'll treat a reservation as an optional part of the loan process.
 -- Multiple books could be reserved in a single session, but this isn't tracked.
-create table loan (
-    loan_id int primary key auto_increment,
+create table loan_process (
+	loan_id int primary key auto_increment,
     book_id int,
     copy_count int,
     customer_id int,
+    foreign key (book_id, copy_count) references book_copy (book_id, copy_count),
+    foreign key (customer_id) references customer (customer_id)
+);
+create table loan (
+    loan_id int primary key auto_increment,
     reserved_at timestamp null default current_timestamp,
     reservation_canceled_at timestamp null,
     picked_up int null,
     returned int null,
     due_date date null,
+    foreign key (picked_up) references counter_event (event_id),
+    foreign key (returned) references counter_event (event_id)
+);
+/*
     loan_status varchar(16) as 
 	(
 		case
@@ -185,11 +194,7 @@ create table loan (
 				'reserved'
         end
 	) virtual,
-    foreign key (book_id, copy_count) REFERENCES book_copy (book_id, copy_count),
-    foreign key (customer_id) references customer (customer_id),
-    foreign key (picked_up) references counter_event (event_id),
-    foreign key (returned) references counter_event (event_id)
-);
+*/
 -- todo: check constraint: customer ids for loan and counter event must match (unless i want to make possible that someone returns someone else's books.)
 -- todo: normalize into one table for loan, one for reservation and one that handles book and customer
 create table reservation (
