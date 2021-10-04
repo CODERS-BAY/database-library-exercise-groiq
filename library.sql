@@ -169,14 +169,19 @@ create table loan_process (
     customer_id int,
     foreign key (book_id, copy_count) references book_copy (book_id, copy_count),
     foreign key (customer_id) references customer (customer_id)
+) comment 'tracks a loan and/or reservation with book copy and customer';
+create table reservation (
+	loan_id int primary key,
+    reserved_at timestamp default current_timestamp,
+    reservation_canceled_at timestamp null,
+    foreign key (loan_id) references loan_process (loan_id)
 );
 create table loan (
-    loan_id int primary key auto_increment,
-    reserved_at timestamp null default current_timestamp,
-    reservation_canceled_at timestamp null,
-    picked_up int null,
+	loan_id int primary key,
+    picked_up int,
     returned int null,
-    due_date date null,
+    due_date date,
+    foreign key (loan_id) references loan_process (loan_id),
     foreign key (picked_up) references counter_event (event_id),
     foreign key (returned) references counter_event (event_id)
 );
