@@ -158,8 +158,6 @@ create table counter_event (
     fee_paid decimal(8, 2),
     foreign key (employee_id) references employee (employee_id)
 ) comment 'stores one customer interaction at the counter, where the customer can pay some fees and pick up and/or return multiple books';
--- Since reservations without loans are supposed to be an exception, I'll treat a reservation as an optional part of the loan process.
--- Multiple books could be reserved in a single session, but this isn't tracked.
 create table loan_process (
 	loan_id int primary key auto_increment,
     book_id int,
@@ -168,6 +166,9 @@ create table loan_process (
     foreign key (book_id, copy_count) references book_copy (book_id, copy_count),
     foreign key (customer_id) references customer (customer_id)
 ) comment 'tracks a loan and/or reservation with book copy and customer';
+-- I assume that all reservations are online, because if the customer is present, they can just pick up a book. 
+-- So a reservation is never connected to a counter event. 
+-- Multiple books could be reserved in a single session, but this isn't tracked.
 create table reservation (
 	loan_id int primary key,
     reserved_at timestamp default current_timestamp,
