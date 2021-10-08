@@ -19,11 +19,11 @@ create table subject_area (
 create table shelf (
     shelf_id int primary key,
     subject_id int null 
-		comment 'connects a book shelf (as opposed to a journal shelf) to a subject. Identifies a book shelf.',
+        comment 'connects a book shelf (as opposed to a journal shelf) to a subject. Identifies a book shelf.',
     journal_shelf_id int as (if(subject_id is null, shelf_id, null)) stored null unique
-		comment 'null for a bookshelf, shelf_id for a journal shelf',
+        comment 'null for a bookshelf, shelf_id for a journal shelf',
     bookshelf_id int as (if(subject_id is null, null, shelf_id)) stored null unique
-		comment 'shelf_id for a bookshelf, null for a journal shelf',
+        comment 'shelf_id for a bookshelf, null for a journal shelf',
     foreign key (subject_id) references subject_area (subject_id)
 );
 
@@ -46,7 +46,7 @@ create table journal (
     journal_id int primary key auto_increment,
     journal_title varchar(64),
     issue_name_template varchar(64) 
-		comment 'can hold a template for issue designation, eg. "01/2010", "Fall 2010",..., supposing template handling is up to the app',
+        comment 'can hold a template for issue designation, eg. "01/2010", "Fall 2010",..., supposing template handling is up to the app',
     shelf_id int,
     foreign key (shelf_id) references shelf (journal_shelf_id)
 );
@@ -125,13 +125,13 @@ create table text_kwd (
 -- people
 
 create table customer_status (
-	status_id int primary key auto_increment,
+    status_id int primary key auto_increment,
     status_name varchar(64)
 );
 insert into customer_status 
-	(status_name) 
+    (status_name) 
 values 
-	('inactive / locked'),
+    ('inactive / locked'),
     ('active'),
     ('overdue');
 create table customer (
@@ -158,7 +158,7 @@ create table counter_event (
     foreign key (employee_id) references employee (employee_id)
 ) comment 'stores one customer interaction at the counter, where the customer can pay some fees and pick up and/or return multiple books';
 create table loan_process (
-	loan_id int primary key auto_increment,
+    loan_id int primary key auto_increment,
     book_id int,
     copy_count int,
     customer_id int,
@@ -169,13 +169,13 @@ create table loan_process (
 -- So a reservation is never connected to a counter event. 
 -- Multiple books could be reserved in a single session, but this isn't tracked.
 create table reservation (
-	loan_id int primary key,
+    loan_id int primary key,
     reserved_at timestamp default current_timestamp,
     reservation_canceled_at timestamp null,
     foreign key (loan_id) references loan_process (loan_id)
 );
 create table loan (
-	loan_id int primary key,
+    loan_id int primary key,
     picked_up int,
     returned int null,
     due_date date,
@@ -186,8 +186,8 @@ create table loan (
 
 -- how to determine loan status
 create view loan_overview as 
-	select 
-		p.book_id,
+    select 
+        p.book_id,
         p.copy_count,
         p.customer_id,
         r.reserved_at,
@@ -196,24 +196,24 @@ create view loan_overview as
         l.returned,
         l.due_date,
         (
-			case 
-			when returned is not null then 'returned' 
+            case 
+            when returned is not null then 'returned' 
             when picked_up is not null then 
-				case
-				when due_date < current_date then 'overdue'
-				else 'on loan'
-				end
+                case
+                when due_date < current_date then 'overdue'
+                else 'on loan'
+                end
             when reservation_canceled_at is not null then 'canceled reservation' 
             when reserved_at is not null then 'reserved'
             else 'data error'
-			end
-		) as loan_status, 
+            end
+        ) as loan_status, 
         (
-			(returned is not null) * 1 + 
-			(picked_up is not null) * 2 + 
-			(due_date is not null and due_date < current_date) * 4 + 
-			(reservation_canceled_at is not null) * 8 + 
-			(reserved_at is not null) * 16 
+            (returned is not null) * 1 + 
+            (picked_up is not null) * 2 + 
+            (due_date is not null and due_date < current_date) * 4 + 
+            (reservation_canceled_at is not null) * 8 + 
+            (reserved_at is not null) * 16 
         ) as status_code
     from loan_process as p
     left join reservation as r on p.loan_id = r.loan_id 
