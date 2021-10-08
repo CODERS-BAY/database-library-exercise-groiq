@@ -63,7 +63,6 @@ create table article (
     article_id int PRIMARY key auto_increment,
     article_title varchar(64),
     issue_id int,
-    subject_id int,
     foreign key (issue_id) references journal_issue (issue_id),
     foreign key (article_id) references document (article_id)
 );
