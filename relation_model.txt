@@ -1,0 +1,25 @@
+
+relation model 
+
+subject_area (subject_id int pk, subject_name varchar)
+shelf (shelf_id int pk, subject_id int fk)
+document (text_id int pk, title varchar, subject_id fk, is_book bool)
+journal (journal_id int pk, title varchar, issue_name_template varchar, shelf_id fk)
+journal_issue (issue_id int pk, journal_id int fk, issue_number int, publish_date date)
+article (article_id int pk fk, title varchar, issue_id fk)
+publisher (publisher_id int pk, name varchar)
+book (book_id int pk fk, publisher_id fk, shelf_id fk)
+book_copy (book_id int pk fk, copy_count int pd, is_available boolean)
+author (author_id int pk, name varchar)
+authorship (author_id int pk fk, text_id int pk fk)
+keyword (kwd_id int pk)
+kwd_synonym (synonym_id int pk, kwd_id fk, synonym_text varchar)
+text_kwd (text_id int pk fk, kwd_id int pk fk, relevance int)
+customer_status (status_id in pk, name varchar)
+customer (customer_id int pk, name varchar, status fk)
+employee (employee_id int pk fk, position varchar, salary_information varchar)
+counter_event (event_id int pk, employee_id fk, event_time timestamp, fee_paid decimal)
+loan_process (loan_id int pk, book_id fk, copy_count fk, customer_id fk)
+reservation (loan_id int pk fk, reserved_at timestamp, canceled_at timestamp)
+loan (loan_id int pk fk, picked_up fk, returned fk, due_date date)
+
