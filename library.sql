@@ -30,7 +30,7 @@ create table shelf (
 -- texts
 
 -- note that subject_id for books is set twice, once here and once through shelf. That's an issue.
-create table document (
+create table textx (
     text_id int primary key,
     text_title varchar(64),
     subject_id int,
@@ -38,7 +38,7 @@ create table document (
     book_id int as (if(is_book = true, text_id, null)) stored null unique,
     article_id int as (if(is_book = true, null, text_id)) stored null unique,
     foreign key (subject_id) references subject_area (subject_id)
-) comment 'a single text; either a book or a journal article';
+) comment 'a single text; either a book or a journal article. X is appended because text is a reserved word.';
 
 -- journals
 
@@ -64,7 +64,7 @@ create table article (
     article_title varchar(64),
     issue_id int,
     foreign key (issue_id) references journal_issue (issue_id),
-    foreign key (article_id) references document (article_id)
+    foreign key (article_id) references textx (article_id)
 );
 
 -- books
@@ -80,15 +80,15 @@ create table book (
     shelf_id int,
     foreign key (publisher_id) references publisher (publisher_id),
     foreign key (shelf_id) references shelf (bookshelf_id),
-    foreign key (book_id) references document (book_id)
+    foreign key (book_id) references textx (book_id)
 );
 create table book_copy (
     book_id int,
-    copy_count int comment 'counts multiple copies of the same book',
+    copy_number int comment 'counter for multiple copies of the same book',
     is_available boolean default true comment 'tracks only whether a book is currently available. More information handled through a loan itself.',
     FOREIGN KEY (book_id) REFERENCES book (book_id),
-    PRIMARY KEY (book_id, copy_count)
-);
+    PRIMARY KEY (book_id, copy_number)
+) comment 'a copy of a book, identified by the book id + copy number';
 
 -- authors
 
@@ -100,7 +100,7 @@ create table authorship (
     author_id int,
     text_id int,
     FOREIGN KEY (author_id) REFERENCES author (author_id),
-    FOREIGN KEY (text_id) REFERENCES document (text_id),
+    FOREIGN KEY (text_id) REFERENCES textx (text_id),
     PRIMARY KEY (author_id, text_id)
 );
 
@@ -117,7 +117,7 @@ create table text_kwd (
     text_id int,
     kwd_id int,
     relevance int,
-    FOREIGN KEY (text_id) REFERENCES document (text_id),
+    FOREIGN KEY (text_id) REFERENCES textx (text_id),
     FOREIGN KEY (kwd_id) REFERENCES keyword (kwd_id),
     PRIMARY KEY (text_id, kwd_id)
 );
@@ -160,9 +160,9 @@ create table counter_event (
 create table loan_process (
     loan_id int primary key auto_increment,
     book_id int,
-    copy_count int,
+    copy_number int,
     customer_id int,
-    foreign key (book_id, copy_count) references book_copy (book_id, copy_count),
+    foreign key (book_id, copy_number) references book_copy (book_id, copy_number),
     foreign key (customer_id) references customer (customer_id)
 ) comment 'tracks a loan and/or reservation with book copy and customer';
 -- I assume that all reservations are online, because if the customer is present, they can just pick up a book. 
@@ -184,11 +184,11 @@ create table loan (
     foreign key (returned) references counter_event (event_id)
 );
 
--- how to determine loan status
+-- sample: how to determine loan status
 create view loan_overview as 
     select 
         p.book_id,
-        p.copy_count,
+        p.copy_number,
         p.customer_id,
         r.reserved_at,
         r.reservation_canceled_at,
