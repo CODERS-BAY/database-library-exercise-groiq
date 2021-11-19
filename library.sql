@@ -123,16 +123,19 @@ CREATE TABLE keyword
 );
 CREATE TABLE kwd_synonym
 (
-    synonym_id   INT PRIMARY KEY AUTO_INCREMENT,
-    kwd_id       INT,
-    snyonym_text VARCHAR(64),
-    FOREIGN KEY (kwd_id) REFERENCES keyword (kwd_id)
-);
+    kwd_a     INT,
+    kwd_b     INT,
+    match_pct DECIMAL(3, 2) NULL COMMENT 'match (congruence) between kwds in percent',
+    FOREIGN KEY (kwd_a) REFERENCES keyword (kwd_id),
+    FOREIGN KEY (kwd_b) REFERENCES keyword (kwd_id),
+    PRIMARY KEY (kwd_a, kwd_b),
+    CONSTRAINT 'max_one_synonym_entry_per_kwd_pair' CHECK (kwd_a < kwd_b)
+) COMMENT 'synonymous keywords. Each pair is recorded once, and a kwd cannot be matched with itself. Optionally record congruencd in percent.';
 CREATE TABLE text_kwd
 (
     text_id   INT,
     kwd_id    INT,
-    relevance INT,
+    relevance DECIMAL(3, 2),
     FOREIGN KEY (text_id) REFERENCES textx (text_id),
     FOREIGN KEY (kwd_id) REFERENCES keyword (kwd_id),
     PRIMARY KEY (text_id, kwd_id)
