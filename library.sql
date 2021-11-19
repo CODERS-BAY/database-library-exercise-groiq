@@ -31,7 +31,11 @@ CREATE TABLE shelf
 
 -- texts
 
--- note that subject_id for books is set twice, once here and once through shelf. That's an issue.
+/*
+note that subject_id for books is set twice, once here and once through shelf. That's an issue.
+The alternative would be setting subject_id in bookshelf and in journal_article,
+but that would make tracking text subjects quite a hassle.
+ */
 CREATE TABLE textx
 (
     text_id    INT PRIMARY KEY,
@@ -49,8 +53,8 @@ CREATE TABLE journal
 (
     journal_id          INT PRIMARY KEY AUTO_INCREMENT,
     journal_title       VARCHAR(64),
-    issue_name_template VARCHAR(64)
-        COMMENT 'can hold a template for issue designation, eg. "01/2010", "Fall 2010",..., supposing template handling is up to the app',
+    issue_name_template VARCHAR(64) NULL
+        COMMENT 'optional. can hold a template for issue designation, eg. "01/2010", "Fall 2010",..., supposing template handling is up to the app',
     shelf_id            INT,
     FOREIGN KEY (shelf_id) REFERENCES shelf (journal_shelf_id)
 );
@@ -64,7 +68,7 @@ CREATE TABLE journal_issue
     UNIQUE (journal_id, issue_number),
     UNIQUE (journal_id, publish_date)
 ) COMMENT 'tracks a single issue of a journal by both publish date and an issue number.';
-CREATE TABLE article
+CREATE TABLE journal_article
 (
     article_id    INT PRIMARY KEY AUTO_INCREMENT,
     article_title VARCHAR(64),
@@ -80,12 +84,11 @@ CREATE TABLE publisher
     publisher_id   INT PRIMARY KEY AUTO_INCREMENT,
     publisher_name VARCHAR(54)
 );
--- assuming that all copies of a book are stored in the same place
 CREATE TABLE book
 (
     book_id      INT PRIMARY KEY AUTO_INCREMENT,
     publisher_id INT,
-    shelf_id     INT,
+    shelf_id     INT COMMENT 'assuming that all copies of a book are stored in the same place',
     FOREIGN KEY (publisher_id) REFERENCES publisher (publisher_id),
     FOREIGN KEY (shelf_id) REFERENCES shelf (bookshelf_id),
     FOREIGN KEY (book_id) REFERENCES textx (book_id)
@@ -160,14 +163,13 @@ CREATE TABLE customer
     customer_status INT DEFAULT 1,
     FOREIGN KEY (customer_status) REFERENCES customer_status (status_id)
 );
--- Since an employee will probably want to loan books themselves, employees get a customer account.
 CREATE TABLE employee
 (
     employee_id        INT PRIMARY KEY AUTO_INCREMENT,
     position           VARCHAR(64),
     salary_information VARCHAR(64),
     FOREIGN KEY (employee_id) REFERENCES customer (customer_id)
-);
+) COMMENT 'Since an employee will probably want to loan books themselves, employees get a customer account';
 
 -- loan handling
 
@@ -175,8 +177,8 @@ CREATE TABLE counter_event
 (
     event_id    INT PRIMARY KEY AUTO_INCREMENT,
     employee_id INT,
-    event_time  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    fee_paid    DECIMAL(8, 2),
+    event_time  TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+    fee_paid    DECIMAL(5, 2) DEFAULT 0.0,
     FOREIGN KEY (employee_id) REFERENCES employee (employee_id)
 ) COMMENT 'stores one customer interaction at the counter, where the customer can pay some fees and pick up and/or return multiple books';
 CREATE TABLE loan_process
@@ -188,8 +190,8 @@ CREATE TABLE loan_process
     FOREIGN KEY (book_id, copy_number) REFERENCES book_copy (book_id, copy_number),
     FOREIGN KEY (customer_id) REFERENCES customer (customer_id)
 ) COMMENT 'tracks a loan and/or reservation with book copy and customer';
--- I assume that all reservations are online, because if the customer is present, they can just pick up a book. 
--- So a reservation is never connected to a counter event. 
+-- I assume that reservations are online, because if the customer is present, they can just pick up a book.
+-- So a reservation isn't connected to a counter event.
 -- Multiple books could be reserved in a single session, but this isn't tracked.
 CREATE TABLE reservation
 (
@@ -202,7 +204,7 @@ CREATE TABLE loan
 (
     loan_id   INT PRIMARY KEY,
     picked_up INT,
-    returned  INT NULL,
+    returned  INT NULL DEFAULT NULL,
     due_date  DATE,
     FOREIGN KEY (loan_id) REFERENCES loan_process (loan_id),
     FOREIGN KEY (picked_up) REFERENCES counter_event (event_id),
