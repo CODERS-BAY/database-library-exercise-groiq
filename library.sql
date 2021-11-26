@@ -2,17 +2,12 @@ DROP DATABASE IF EXISTS library;
 CREATE DATABASE library;
 USE library;
 
-/*
-For simplicity I'll pretend that non-null is the default, 
-so a field is supposed to be nullable only if explicitly stated. 
-*/
-
--- subject areas 
+-- subject areas
 
 CREATE TABLE subject_area
 (
     subject_id   INT PRIMARY KEY AUTO_INCREMENT,
-    subject_name VARCHAR(64)
+    subject_name VARCHAR(64) NOT NULL
 );
 
 -- shelves
@@ -39,9 +34,9 @@ but that would make tracking text subjects quite a hassle.
 CREATE TABLE textx
 (
     text_id    INT PRIMARY KEY,
-    text_title VARCHAR(64),
-    subject_id INT,
-    is_book    BOOLEAN,
+    text_title VARCHAR(64)                                       NOT NULL,
+    subject_id INT                                               NOT NULL,
+    is_book    BOOLEAN                                           NOT NULL DEFAULT TRUE,
     book_id    INT AS (IF(is_book = TRUE, text_id, NULL)) STORED NULL UNIQUE,
     article_id INT AS (IF(is_book = TRUE, NULL, text_id)) STORED NULL UNIQUE,
     FOREIGN KEY (subject_id) REFERENCES subject_area (subject_id)
@@ -52,18 +47,18 @@ CREATE TABLE textx
 CREATE TABLE journal
 (
     journal_id          INT PRIMARY KEY AUTO_INCREMENT,
-    journal_title       VARCHAR(64),
+    journal_title       VARCHAR(64) NOT NULL,
     issue_name_template VARCHAR(64) NULL
         COMMENT 'optional. can hold a template for issue designation, eg. "01/2010", "Fall 2010",..., supposing template handling is up to the app',
-    shelf_id            INT,
+    shelf_id            INT         NOT NULL,
     FOREIGN KEY (shelf_id) REFERENCES shelf (journal_shelf_id)
 );
 CREATE TABLE journal_issue
 (
     issue_id     INT PRIMARY KEY AUTO_INCREMENT,
-    journal_id   INT,
-    issue_number INT,
-    publish_date DATE,
+    journal_id   INT  NOT NULL,
+    issue_number INT  NOT NULL,
+    publish_date DATE NOT NULL,
     FOREIGN KEY (journal_id) REFERENCES journal (journal_id),
     UNIQUE (journal_id, issue_number),
     UNIQUE (journal_id, publish_date)
@@ -71,8 +66,8 @@ CREATE TABLE journal_issue
 CREATE TABLE journal_article
 (
     article_id    INT PRIMARY KEY AUTO_INCREMENT,
-    article_title VARCHAR(64),
-    issue_id      INT,
+    article_title VARCHAR(64) NOT NULL,
+    issue_id      INT         NOT NULL,
     FOREIGN KEY (issue_id) REFERENCES journal_issue (issue_id),
     FOREIGN KEY (article_id) REFERENCES textx (article_id)
 );
@@ -82,13 +77,13 @@ CREATE TABLE journal_article
 CREATE TABLE publisher
 (
     publisher_id   INT PRIMARY KEY AUTO_INCREMENT,
-    publisher_name VARCHAR(54)
+    publisher_name VARCHAR(54) NOT NULL
 );
 CREATE TABLE book
 (
     book_id      INT PRIMARY KEY AUTO_INCREMENT,
-    publisher_id INT,
-    shelf_id     INT COMMENT 'assuming that all copies of a book are stored in the same place',
+    publisher_id INT NOT NULL,
+    shelf_id     INT NOT NULL COMMENT 'assuming that all copies of a book are stored in the same place',
     FOREIGN KEY (publisher_id) REFERENCES publisher (publisher_id),
     FOREIGN KEY (shelf_id) REFERENCES shelf (bookshelf_id),
     FOREIGN KEY (book_id) REFERENCES textx (book_id)
@@ -96,8 +91,8 @@ CREATE TABLE book
 CREATE TABLE book_copy
 (
     book_id      INT,
-    copy_number  INT COMMENT 'counter for multiple copies of the same book',
-    is_available BOOLEAN DEFAULT TRUE COMMENT 'tracks only whether a book is currently available. More information handled through a loan itself.',
+    copy_number  INT              DEFAULT 1 COMMENT 'counter for multiple copies of the same book',
+    is_available BOOLEAN NOT NULL DEFAULT TRUE COMMENT 'tracks only whether a book is currently available. More information handled through a loan itself.',
     FOREIGN KEY (book_id) REFERENCES book (book_id),
     PRIMARY KEY (book_id, copy_number)
 ) COMMENT 'a copy of a book, identified by the book id + copy number';
@@ -107,7 +102,7 @@ CREATE TABLE book_copy
 CREATE TABLE author
 (
     author_id   INT PRIMARY KEY AUTO_INCREMENT,
-    author_name VARCHAR(64)
+    author_name VARCHAR(64) NOT NULL
 );
 CREATE TABLE authorship
 (
@@ -122,34 +117,35 @@ CREATE TABLE authorship
 
 CREATE TABLE keyword
 (
-    kwd_id INT PRIMARY KEY AUTO_INCREMENT
+    kwd_id      INT PRIMARY KEY AUTO_INCREMENT,
+    kwd_content VARCHAR(64) NOT NULL
 );
 CREATE TABLE kwd_synonym
 (
     kwd_a     INT,
     kwd_b     INT,
-    match_pct DECIMAL(3, 2) NULL COMMENT 'match (congruence) between kwds in percent',
+    match_pct DECIMAL(3, 2) NULL COMMENT 'optional: match (congruence) between kwds in percent',
     FOREIGN KEY (kwd_a) REFERENCES keyword (kwd_id),
     FOREIGN KEY (kwd_b) REFERENCES keyword (kwd_id),
     PRIMARY KEY (kwd_a, kwd_b),
     CONSTRAINT 'max_one_synonym_entry_per_kwd_pair' CHECK (kwd_a < kwd_b)
-) COMMENT 'synonymous keywords. Each pair is recorded once, and a kwd cannot be matched with itself. Optionally record congruencd in percent.';
+) COMMENT 'synonymous keywords. Each pair is recorded once, and a kwd cannot be matched with itself. Optionally record congruency in percent.';
 CREATE TABLE text_kwd
 (
     text_id   INT,
     kwd_id    INT,
-    relevance DECIMAL(3, 2),
+    relevance DECIMAL(3, 2) NULL COMMENT 'optional: relevance of the kwd for the text in percent',
     FOREIGN KEY (text_id) REFERENCES textx (text_id),
     FOREIGN KEY (kwd_id) REFERENCES keyword (kwd_id),
     PRIMARY KEY (text_id, kwd_id)
-);
+) COMMENT 'tags a text with a keyword. Optionally tracks kwd relevance in percent.';
 
 -- people
 
 CREATE TABLE customer_status
 (
     status_id   INT PRIMARY KEY AUTO_INCREMENT,
-    status_name VARCHAR(64)
+    status_name VARCHAR(64) NOT NULL
 );
 INSERT INTO customer_status
     (status_name)
@@ -159,15 +155,15 @@ VALUES ('inactive / locked'),
 CREATE TABLE customer
 (
     customer_id     INT PRIMARY KEY AUTO_INCREMENT,
-    customer_name   VARCHAR(64),
-    customer_status INT DEFAULT 1,
+    customer_name   VARCHAR(64) NOT NULL,
+    customer_status INT         NOT NULL DEFAULT 1,
     FOREIGN KEY (customer_status) REFERENCES customer_status (status_id)
 );
 CREATE TABLE employee
 (
     employee_id        INT PRIMARY KEY AUTO_INCREMENT,
-    position           VARCHAR(64),
-    salary_information VARCHAR(64),
+    position           VARCHAR(64) NULL COMMENT 'optionally track employee position',
+    salary_information VARCHAR(64) NULL COMMENT 'optionally track some salary information',
     FOREIGN KEY (employee_id) REFERENCES customer (customer_id)
 ) COMMENT 'Since an employee will probably want to loan books themselves, employees get a customer account';
 
@@ -176,17 +172,17 @@ CREATE TABLE employee
 CREATE TABLE counter_event
 (
     event_id    INT PRIMARY KEY AUTO_INCREMENT,
-    employee_id INT,
-    event_time  TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
-    fee_paid    DECIMAL(5, 2) DEFAULT 0.0,
+    employee_id INT           NOT NULL COMMENT 'each counter event is handled by one employee',
+    event_time  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fee_paid    DECIMAL(5, 2) NULL     DEFAULT 0.0 COMMENT 'optional: track fees paid at counter',
     FOREIGN KEY (employee_id) REFERENCES employee (employee_id)
 ) COMMENT 'stores one customer interaction at the counter, where the customer can pay some fees and pick up and/or return multiple books';
 CREATE TABLE loan_process
 (
     loan_id     INT PRIMARY KEY AUTO_INCREMENT,
-    book_id     INT,
-    copy_number INT,
-    customer_id INT,
+    book_id     INT NOT NULL,
+    copy_number INT NOT NULL,
+    customer_id INT NOT NULL,
     FOREIGN KEY (book_id, copy_number) REFERENCES book_copy (book_id, copy_number),
     FOREIGN KEY (customer_id) REFERENCES customer (customer_id)
 ) COMMENT 'tracks a loan and/or reservation with book copy and customer';
@@ -196,22 +192,22 @@ CREATE TABLE loan_process
 CREATE TABLE reservation
 (
     loan_id                 INT PRIMARY KEY,
-    reserved_at             TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    reservation_canceled_at TIMESTAMP NULL,
+    reserved_at             TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+    reservation_canceled_at TIMESTAMP NULL DEFAULT NULL,
     FOREIGN KEY (loan_id) REFERENCES loan_process (loan_id)
 );
 CREATE TABLE loan
 (
     loan_id   INT PRIMARY KEY,
-    picked_up INT,
-    returned  INT NULL DEFAULT NULL,
-    due_date  DATE,
+    picked_up INT  NOT NULL,
+    returned  INT  NULL DEFAULT NULL,
+    due_date  DATE NULL DEFAULT NULL COMMENT 'due date is optional in case they want to calculate it from pickup date',
     FOREIGN KEY (loan_id) REFERENCES loan_process (loan_id),
     FOREIGN KEY (picked_up) REFERENCES counter_event (event_id),
     FOREIGN KEY (returned) REFERENCES counter_event (event_id)
 );
 
--- sample: how to determine loan status
+-- demo: how to determine loan status
 CREATE VIEW loan_overview AS
 SELECT p.book_id,
        p.copy_number,
