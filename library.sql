@@ -128,7 +128,7 @@ CREATE TABLE kwd_synonym
     FOREIGN KEY (kwd_a) REFERENCES keyword (kwd_id),
     FOREIGN KEY (kwd_b) REFERENCES keyword (kwd_id),
     PRIMARY KEY (kwd_a, kwd_b),
-    CONSTRAINT 'max_one_synonym_entry_per_kwd_pair' CHECK (kwd_a < kwd_b)
+    CONSTRAINT max_one_synonym_entry_per_kwd_pair CHECK (kwd_a < kwd_b)
 ) COMMENT 'synonymous keywords. Each pair is recorded once, and a kwd cannot be matched with itself. Optionally record congruency in percent.';
 CREATE TABLE text_kwd
 (
