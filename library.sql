@@ -14,7 +14,8 @@ CREATE TABLE subject_area
 
 CREATE TABLE shelf
 (
-    shelf_id         INT PRIMARY KEY,
+    shelf_id         INT PRIMARY KEY COMMENT 'cannot autoincrement when using in generated column',
+
     subject_id       INT                                                    NULL
         COMMENT 'connects a book shelf (as opposed to a journal shelf) to a subject. Identifies a book shelf.',
     journal_shelf_id INT AS (IF(subject_id IS NULL, shelf_id, NULL)) STORED NULL UNIQUE
@@ -30,15 +31,16 @@ CREATE TABLE shelf
 note that subject_id for books is set twice, once here and once through shelf. That's an issue.
 The alternative would be setting subject_id in bookshelf and in journal_article,
 but that would make tracking text subjects quite a hassle.
+backlog: trigger constraint for that.
  */
 CREATE TABLE textx
 (
-    text_id    INT PRIMARY KEY,
-    text_title VARCHAR(64)                                       NOT NULL,
-    subject_id INT                                               NOT NULL,
-    is_book    BOOLEAN                                           NOT NULL DEFAULT TRUE,
-    book_id    INT AS (IF(is_book = TRUE, text_id, NULL)) STORED NULL UNIQUE,
-    article_id INT AS (IF(is_book = TRUE, NULL, text_id)) STORED NULL UNIQUE,
+    text_id    INT PRIMARY KEY AUTO_INCREMENT,
+    text_title VARCHAR(64) NOT NULL,
+    subject_id INT         NOT NULL,
+    is_book    BOOLEAN     NOT NULL DEFAULT TRUE,
+#     book_id    INT AS (IF(is_book = TRUE, text_id, NULL)) STORED NULL UNIQUE,
+#     article_id INT AS (IF(is_book = TRUE, NULL, text_id)) STORED NULL UNIQUE,
     FOREIGN KEY (subject_id) REFERENCES subject_area (subject_id)
 ) COMMENT 'a single text; either a book or a journal article. X is appended because text is a reserved word.';
 
@@ -55,7 +57,7 @@ CREATE TABLE journal
 );
 CREATE TABLE journal_issue
 (
-    issue_id     INT PRIMARY KEY AUTO_INCREMENT,
+    issue_id     INT PRIMARY KEY AUTO_INCREMENT COMMENT 'using surrogate key because unclear how issue number and publish date work per journal',
     journal_id   INT  NOT NULL,
     issue_number INT  NOT NULL,
     publish_date DATE NOT NULL,
@@ -65,11 +67,10 @@ CREATE TABLE journal_issue
 ) COMMENT 'tracks a single issue of a journal by both publish date and an issue number.';
 CREATE TABLE journal_article
 (
-    article_id    INT PRIMARY KEY AUTO_INCREMENT,
-    article_title VARCHAR(64) NOT NULL,
-    issue_id      INT         NOT NULL,
+    article_id INT PRIMARY KEY,
+    issue_id   INT NOT NULL,
     FOREIGN KEY (issue_id) REFERENCES journal_issue (issue_id),
-    FOREIGN KEY (article_id) REFERENCES textx (article_id)
+    FOREIGN KEY (article_id) REFERENCES textx (text_id)
 );
 
 -- books
@@ -81,12 +82,12 @@ CREATE TABLE publisher
 );
 CREATE TABLE book
 (
-    book_id      INT PRIMARY KEY AUTO_INCREMENT,
+    book_id      INT PRIMARY KEY,
     publisher_id INT NOT NULL,
     shelf_id     INT NOT NULL COMMENT 'assuming that all copies of a book are stored in the same place',
     FOREIGN KEY (publisher_id) REFERENCES publisher (publisher_id),
     FOREIGN KEY (shelf_id) REFERENCES shelf (bookshelf_id),
-    FOREIGN KEY (book_id) REFERENCES textx (book_id)
+    FOREIGN KEY (book_id) REFERENCES textx (text_id)
 );
 CREATE TABLE book_copy
 (
@@ -147,11 +148,13 @@ CREATE TABLE customer_status
     status_id   INT PRIMARY KEY AUTO_INCREMENT,
     status_name VARCHAR(64) NOT NULL
 );
+START TRANSACTION;
 INSERT INTO customer_status
     (status_name)
 VALUES ('inactive / locked'),
        ('active'),
        ('overdue');
+COMMIT;
 CREATE TABLE customer
 (
     customer_id     INT PRIMARY KEY AUTO_INCREMENT,
@@ -161,7 +164,7 @@ CREATE TABLE customer
 );
 CREATE TABLE employee
 (
-    employee_id        INT PRIMARY KEY AUTO_INCREMENT,
+    employee_id        INT PRIMARY KEY,
     position           VARCHAR(64) NULL COMMENT 'optionally track employee position',
     salary_information VARCHAR(64) NULL COMMENT 'optionally track some salary information',
     FOREIGN KEY (employee_id) REFERENCES customer (customer_id)
@@ -201,7 +204,7 @@ CREATE TABLE loan
     loan_id   INT PRIMARY KEY,
     picked_up INT  NOT NULL,
     returned  INT  NULL DEFAULT NULL,
-    due_date  DATE NULL DEFAULT NULL COMMENT 'due date is optional in case they want to calculate it from pickup date',
+    due_date  DATE NOT NULL,
     FOREIGN KEY (loan_id) REFERENCES loan_process (loan_id),
     FOREIGN KEY (picked_up) REFERENCES counter_event (event_id),
     FOREIGN KEY (returned) REFERENCES counter_event (event_id)
