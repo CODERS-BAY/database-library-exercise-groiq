@@ -195,8 +195,8 @@ CREATE TABLE loan_process
 CREATE TABLE reservation
 (
     loan_id                 INT PRIMARY KEY,
-    reserved_at             TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
-    reservation_canceled_at TIMESTAMP NULL DEFAULT NULL,
+    reserved_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reservation_canceled_at TIMESTAMP NULL     DEFAULT NULL,
     FOREIGN KEY (loan_id) REFERENCES loan_process (loan_id)
 );
 CREATE TABLE loan
@@ -204,9 +204,14 @@ CREATE TABLE loan
     loan_id   INT PRIMARY KEY,
     picked_up INT  NOT NULL,
     returned  INT  NULL DEFAULT NULL,
-    due_date  DATE NOT NULL,
+    due_date  DATE NOT NULL COMMENT 'just gonna suppose due date is handled by the app for now',
     FOREIGN KEY (loan_id) REFERENCES loan_process (loan_id),
     FOREIGN KEY (picked_up) REFERENCES counter_event (event_id),
     FOREIGN KEY (returned) REFERENCES counter_event (event_id)
 );
 
+CREATE TABLE log
+(
+    entry_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    message    VARCHAR(128)
+) COMMENT 'manually log stuff for debugging';

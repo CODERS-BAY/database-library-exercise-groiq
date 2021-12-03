@@ -23,6 +23,7 @@ TRUNCATE TABLE shelf;
 TRUNCATE TABLE subject_area;
 TRUNCATE TABLE text_kwd;
 TRUNCATE TABLE textx;
+TRUNCATE TABLE log;
 SET foreign_key_checks = 1;
 
 COMMIT;
@@ -150,12 +151,12 @@ VALUES (5, 1, 1),
        (8, 1, 1),
        (9, 1, 1);
 
-INSERT INTO book_copy (book_id, is_available)
-VALUES (5, 1),
-       (6, 0),
-       (7, 0),
-       (8, 1),
-       (9, 0);
+INSERT INTO book_copy (book_id)
+VALUES (5),
+       (6),
+       (7),
+       (8),
+       (9);
 
 -- not setting authorship and keywords for now
 
@@ -165,6 +166,11 @@ VALUES (5, 1, 1),
        (7, 1, 1),
        (8, 1, 1),
        (9, 1, 1);
+
+UPDATE book_copy
+SET is_available = 1
+WHERE book_id = 5
+   OR book_id = 8;
 
 INSERT INTO reservation (loan_id, reserved_at, reservation_canceled_at)
 VALUES (3, '2019-10-04', NULL),
