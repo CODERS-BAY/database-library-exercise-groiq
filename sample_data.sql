@@ -168,7 +168,7 @@ VALUES (5, 1, 1),
        (9, 1, 1);
 
 UPDATE book_copy
-SET is_available = 1
+SET current_loan = NULL
 WHERE book_id = 5
    OR book_id = 8;
 

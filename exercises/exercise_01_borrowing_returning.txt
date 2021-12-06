@@ -1,46 +1,51 @@
-mysql> -- Customer borrows two books
-mysql>
-mysql> select * from book_copy WHERE book_id = 2;
-+---------+-------------+--------------+
-| book_id | copy_number | is_available |
-+---------+-------------+--------------+
-|       2 |           1 |            1 |
-|       2 |           2 |            1 |
-+---------+-------------+--------------+
-2 rows in set (0.00 sec)
 
 mysql>
-mysql> select * from loan_overview WHERE book_id = 2;
+mysql> use library;
+Database changed
+mysql>
+mysql>  -- Customer borrows two books
+mysql>
+mysql>  select * from book_copy WHERE book_id = 2;
++---------+-------------+--------------+
+| book_id | copy_number | current_loan |
++---------+-------------+--------------+
+|       2 |           1 |         NULL |
+|       2 |           2 |         NULL |
++---------+-------------+--------------+
+2 rows in set (0.01 sec)
+
+mysql>
+mysql>  select * from loan_overview WHERE book_id = 2;
 Empty set (0.01 sec)
 
 mysql>
-mysql> call loan_unreserved_copy(2, 1, 1, NULL, 2, '2022-05-26');
+mysql>  call loan_unreserved_copy(2, 1, 1, NULL, 2, '2022-05-26');
 Query OK, 0 rows affected (0.01 sec)
 
-mysql> select max(event_id) into @pickup_event from counter_event;
+mysql>  select max(event_id) into @pickup_event from counter_event;
 Query OK, 1 row affected (0.00 sec)
 
-mysql> SELECT max(loan_id) into @loan_1 from loan_process;
+mysql>  SELECT max(loan_id) into @loan_1 from loan_process;
 Query OK, 1 row affected (0.00 sec)
 
-mysql> call loan_unreserved_copy(2, 2, 1, @pickup_event, null, '2022-05-26');
-Query OK, 0 rows affected (0.01 sec)
+mysql>  call loan_unreserved_copy(2, 2, 1, @pickup_event, null, '2022-05-26');
+Query OK, 0 rows affected (0.02 sec)
 
-mysql> SELECT max(loan_id) into @loan_2 from loan_process;
+mysql>  SELECT max(loan_id) into @loan_2 from loan_process;
 Query OK, 1 row affected (0.00 sec)
 
 mysql>
-mysql> select * from book_copy WHERE book_id = 2;
+mysql>  select * from book_copy WHERE book_id = 2;
 +---------+-------------+--------------+
-| book_id | copy_number | is_available |
+| book_id | copy_number | current_loan |
 +---------+-------------+--------------+
-|       2 |           1 |            0 |
-|       2 |           2 |            0 |
+|       2 |           1 |            7 |
+|       2 |           2 |            8 |
 +---------+-------------+--------------+
 2 rows in set (0.00 sec)
 
 mysql>
-mysql> select * from loan_overview WHERE book_id = 2;
+mysql>  select * from loan_overview WHERE book_id = 2;
 +---------+-------------+-------------+---------+-------------+-------------+-------------+-------------------------+-----------+----------+------------+
 | loan_id | loan_status | status_code | book_id | copy_number | customer_id | reserved_at | reservation_canceled_at | picked_up | returned | due_date   |
 +---------+-------------+-------------+---------+-------------+-------------+-------------+-------------------------+-----------+----------+------------+
@@ -50,39 +55,39 @@ mysql> select * from loan_overview WHERE book_id = 2;
 2 rows in set (0.00 sec)
 
 mysql>
-mysql> SELECT @pickup_event, @loan_1, @loan_2;
+mysql>  SELECT @pickup_event, @loan_1, @loan_2;
 +---------------+---------+---------+
 | @pickup_event | @loan_1 | @loan_2 |
 +---------------+---------+---------+
 |             5 |       7 |       8 |
 +---------------+---------+---------+
-1 row in set (0.01 sec)
+1 row in set (0.00 sec)
 
 mysql>
 mysql>
-mysql> -- Customer returns two books
+mysql>  -- Customer returns two books
 mysql>
-mysql> CALL return_copy(@loan_1, null, 3);
-Query OK, 0 rows affected (0.02 sec)
+mysql>  CALL return_copy(@loan_1, null, 3);
+Query OK, 0 rows affected (0.01 sec)
 
-mysql> select max(event_id) into @return_event from counter_event;
+mysql>  select max(event_id) into @return_event from counter_event;
 Query OK, 1 row affected (0.00 sec)
 
-mysql> CALL return_copy(@loan_2, @return_event, null);
+mysql>  CALL return_copy(@loan_2, @return_event, null);
 Query OK, 0 rows affected (0.01 sec)
 
 mysql>
-mysql> select * from book_copy WHERE book_id = 2;
+mysql>  select * from book_copy WHERE book_id = 2;
 +---------+-------------+--------------+
-| book_id | copy_number | is_available |
+| book_id | copy_number | current_loan |
 +---------+-------------+--------------+
-|       2 |           1 |            1 |
-|       2 |           2 |            1 |
+|       2 |           1 |         NULL |
+|       2 |           2 |         NULL |
 +---------+-------------+--------------+
 2 rows in set (0.00 sec)
 
 mysql>
-mysql> select * from loan_overview WHERE book_id = 2;
+mysql>  select * from loan_overview WHERE book_id = 2;
 +---------+-------------+-------------+---------+-------------+-------------+-------------+-------------------------+-----------+----------+------------+
 | loan_id | loan_status | status_code | book_id | copy_number | customer_id | reserved_at | reservation_canceled_at | picked_up | returned | due_date   |
 +---------+-------------+-------------+---------+-------------+-------------+-------------+-------------------------+-----------+----------+------------+
@@ -91,4 +96,12 @@ mysql> select * from loan_overview WHERE book_id = 2;
 +---------+-------------+-------------+---------+-------------+-------------+-------------+-------------------------+-----------+----------+------------+
 2 rows in set (0.00 sec)
 
+mysql>
+mysql> -- loaning the book twice in a row should fail
+mysql> call loan_unreserved_copy(2, 1, 1, NULL, 2, '2022-05-26');
+Query OK, 0 rows affected (0.02 sec)
+
+mysql> call loan_unreserved_copy(2, 1, 1, NULL, 2, '2022-05-26');
+ERROR 1644 (45000): Error: book #2, copy #1 is marked as unavailable because of loan #9.
+mysql>
 mysql>

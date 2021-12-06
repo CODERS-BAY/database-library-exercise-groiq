@@ -92,11 +92,13 @@ CREATE TABLE book
 CREATE TABLE book_copy
 (
     book_id      INT,
-    copy_number  INT              DEFAULT 1 COMMENT 'counter for multiple copies of the same book',
-    is_available BOOLEAN NOT NULL DEFAULT TRUE COMMENT 'tracks only whether a book is currently available. More information handled through a loan itself.',
+    copy_number  INT               DEFAULT 1 COMMENT 'counter for multiple copies of the same book',
+    current_loan INT UNSIGNED NULL DEFAULT NULL COMMENT 'loan_process.loan_id for the current loan. Null if book is available. FK cannot be implemented for circularit.',
+    -- is_available BOOLEAN NOT NULL DEFAULT TRUE COMMENT 'tracks only whether a book is currently available. More information handled through a loan itself.',
     FOREIGN KEY (book_id) REFERENCES book (book_id),
+    UNIQUE (current_loan),
     PRIMARY KEY (book_id, copy_number)
-) COMMENT 'a copy of a book, identified by the book id + copy number';
+) COMMENT 'a copy of a book, identified by the book id + copy number. Has a unique optional current loan.';
 
 -- authors
 
@@ -215,3 +217,4 @@ CREATE TABLE log
     entry_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     message    VARCHAR(128)
 ) COMMENT 'manually log stuff for debugging';
+

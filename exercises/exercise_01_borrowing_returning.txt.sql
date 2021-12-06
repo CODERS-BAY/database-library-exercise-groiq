@@ -1,3 +1,5 @@
+use library;
+
  -- Customer borrows two books
 
  select * from book_copy WHERE book_id = 2;
@@ -26,4 +28,8 @@
  select * from book_copy WHERE book_id = 2;
 
  select * from loan_overview WHERE book_id = 2;
+
+-- loaning the book twice in a row should fail
+call loan_unreserved_copy(2, 1, 1, NULL, 2, '2022-05-26');
+call loan_unreserved_copy(2, 1, 1, NULL, 2, '2022-05-26');
 
