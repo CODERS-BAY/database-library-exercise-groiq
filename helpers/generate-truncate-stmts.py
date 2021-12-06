@@ -22,6 +22,7 @@ shelf
 subject_area
 text_kwd
 textx
+log
 '''.split('\n')
 
 for table in tables:
