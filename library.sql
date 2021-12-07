@@ -39,8 +39,8 @@ CREATE TABLE textx
     text_title VARCHAR(64) NOT NULL,
     subject_id INT         NOT NULL,
     is_book    BOOLEAN     NOT NULL DEFAULT TRUE,
-#     book_id    INT AS (IF(is_book = TRUE, text_id, NULL)) STORED NULL UNIQUE,
-#     article_id INT AS (IF(is_book = TRUE, NULL, text_id)) STORED NULL UNIQUE,
+    -- book_id    INT AS (IF(is_book = TRUE, text_id, NULL)) STORED NULL UNIQUE,
+    -- article_id INT AS (IF(is_book = TRUE, NULL, text_id)) STORED NULL UNIQUE,
     FOREIGN KEY (subject_id) REFERENCES subject_area (subject_id)
 ) COMMENT 'a single text; either a book or a journal article. X is appended because text is a reserved word.';
 
