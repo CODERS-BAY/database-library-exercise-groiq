@@ -14,9 +14,3 @@ Each borrowing is handled by one employee, and one employee is also responsible 
 
 Customers can also reserve books, each reservation usually results in a loan. The books and magazines are stored on shelves. A journal is placed on a shelf, and each shelf is assigned a subject area for the storage of the books.
 
-
---TODO writeup on loan availability issue 
--- - current_loan in book table, no fk 
--- - current_loan table, nullable without fk
--- - current loan table, non-nullable with fk, additional logic for checking for active loans
-

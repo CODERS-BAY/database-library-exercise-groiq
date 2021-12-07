@@ -2,6 +2,8 @@ DROP DATABASE IF EXISTS library_variants;
 CREATE DATABASE library_variants;
 USE library_variants;
 
+-- variant 1: current loan tracked in book, no fk
+
 CREATE TABLE book
 (
     bid          INT PRIMARY KEY,
@@ -39,13 +41,15 @@ BEGIN
     UPDATE book SET current_loan = NULL WHERE bid = old.bid;
 END GO
 
+delimiter ;
+
 -- pro: easy to check book status
 CREATE VIEW book_status AS
 SELECT bid,
        CASE WHEN current_loan IS NULL THEN 'available' ELSE 'on loan' END AS status
 FROM book;
 
--- contra: cannot set fk on loan
+-- contra: cannot set fk book.current_loan -> loan.lid without deferred check
 
 INSERT INTO book (bid, btitle)
 VALUES (1, 'my book');
@@ -59,4 +63,3 @@ SELECT b.bid, b.btitle, b.current_loan, l1.lid, l2.lid
 FROM book b
          JOIN loan l1 ON b.bid = l1.bid
          LEFT JOIN loan l2 ON b.current_loan = l2.lid;
-
