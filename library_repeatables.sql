@@ -48,7 +48,7 @@ CREATE TRIGGER loan_makes_copy_unavailable
     ON loan_process
     FOR EACH ROW
 BEGIN
-    DECLARE last_loan INT DEFAULT -1;
+    DECLARE last_loan INT DEFAULT -1; -- todo is the last_loan column marked as unsigned?
 
     SELECT current_loan
     INTO last_loan
@@ -57,10 +57,13 @@ BEGIN
       AND book_copy.copy_number = new.copy_number;
 
     IF last_loan IS NOT NULL THEN
-        SET @message = CONCAT(
-                'Error: book #', new.book_id, ', copy #', new.copy_number,
-                ' is marked as unavailable because of loan #', last_loan, '.');
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = @message;
+        BEGIN
+            DECLARE message VARCHAR(128);
+            SET message = CONCAT(
+                    'Error: book #', new.book_id, ', copy #', new.copy_number,
+                    ' is marked as unavailable because of loan #', last_loan, '.');
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = message;
+        END;
     END IF;
 
     UPDATE book_copy
@@ -87,11 +90,14 @@ BEGIN
     WHERE l.loan_id = loan_id_p;
 
     IF NOT current_loan_p = loan_id_p THEN
-        SET @message = CONCAT(
-                'Error: loan process #', loan_id_p,
-                ' was not marked as current loan for book #', book_id_p,
-                ', copy #', copy_count_p, '.');
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = @message;
+        BEGIN
+            DECLARE message VARCHAR(80);
+            SET message = CONCAT(
+                    'Error: loan process #', loan_id_p,
+                    ' was not marked as current loan for book #', book_id_p,
+                    ', copy #', copy_count_p, '.');
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = message;
+        END;
     END IF;
 
     UPDATE book_copy SET current_loan = NULL WHERE book_id = book_id_p AND copy_number = copy_count_p;
@@ -106,11 +112,14 @@ CREATE TRIGGER canceling_reservation_makes_copy_available
     FOR EACH ROW
 BEGIN
     IF old.reservation_canceled_at IS NOT NULL OR new.reservation_canceled_at IS NULL THEN
-        SET @message = CONCAT('error: updating reservation for loan #', old.loan_id,
-                              ': the only valid update is to set cancellation timestamp when previously unset, but old timestamp is ',
-                              IFNULL(old.reservation_canceled_at, 'NULL'), ' and new timestamp is ',
-                              IFNULL(new.reservation_canceled_at, 'NULL'));
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = @message;
+        BEGIN
+            DECLARE message VARCHAR(80);
+            SET message = CONCAT('error: updating reservation for loan #', old.loan_id,
+                                 ': the only valid update is to set cancellation timestamp when previously unset, but old timestamp is ',
+                                 IFNULL(old.reservation_canceled_at, 'NULL'), ' and new timestamp is ',
+                                 IFNULL(new.reservation_canceled_at, 'NULL'));
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = message;
+        END;
     END IF;
 
     CALL remove_current_loan_from_copy(old.loan_id);
@@ -205,7 +214,6 @@ BEGIN
 
     INSERT INTO loan_process (book_id, copy_number, customer_id) VALUES (book_id_p, copy_number_p, customer_id_p);
     CALL loan_copy(LAST_INSERT_ID(), counter_event_p, employee_id_p, due_date_p);
-
     COMMIT;
 END
 GO
@@ -223,7 +231,6 @@ BEGIN
 
     CALL check_or_create_counter_event(counter_event_p, employee_id_p);
     UPDATE loan SET returned = counter_event_p WHERE loan_id = loan_id_p;
-
     COMMIT;
 END
 GO
