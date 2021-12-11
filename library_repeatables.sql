@@ -22,11 +22,11 @@ SELECT p.loan_id,
                END
            ) AS loan_status,
        (
-                   (returned IS NOT NULL) * 1 +
-                   (picked_up IS NOT NULL) * 2 +
-                   (due_date IS NOT NULL AND due_date < CURRENT_DATE) * 4 +
-                   (reservation_canceled_at IS NOT NULL) * 8 +
-                   (reserved_at IS NOT NULL) * 16
+                   (returned IS NOT NULL) << 0 |
+                   (picked_up IS NOT NULL) << 1 |
+                   (due_date IS NOT NULL AND due_date < CURRENT_DATE) << 2 |
+                   (reservation_canceled_at IS NOT NULL) << 3 |
+                   (reserved_at IS NOT NULL) << 4
            ) AS status_code,
        p.book_id,
        p.copy_number,
